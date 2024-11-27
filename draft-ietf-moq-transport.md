@@ -1462,6 +1462,62 @@ A publisher MUST send fetched groups in group order, either ascending or
 descending. Within each group, objects are sent in Object ID order;
 subgroup ID is not used for ordering.
 
+## JOIN
+
+A JOIN is a variant of FETCH that joins together with a SUBSCRIBE to provide a contiguous non-overlapping request for objects before and after LatestGroup LatestObject as determined by the receiving publisher.
+
+The format of JOIN is as follows:
+
+~~~
+JOIN Message {
+  Type (i) = 0x16,
+  Length (i),
+  Subscribe ID (i),
+  Subscriber Priority (8),
+  Group Order (8),
+  PreviousGroups (i),
+  Number of Parameters (i),
+  Parameters (..) ...
+}
+~~~
+{: #moq-transport-fetch-format title="MOQT JOIN Message"}
+
+* Subscribe ID: The Subscribe ID identifies a given fetch request. Subscribe ID
+is a variable length integer that MUST be unique and monotonically increasing
+within  a session.
+
+* Track Namespace: Identifies the namespace of the track as defined in
+({{track-name}}).
+
+* Track Name: Identifies the track name as defined in ({{track-name}}).
+
+* Subscriber Priority: Specifies the priority of a fetch request relative to
+other subscriptions or fetches in the same session. Lower numbers get higher
+priority. See {{priorities}}.
+
+* Group Order: Allows the subscriber to request Objects be delivered in
+Ascending (0x1) or Descending (0x2) order by group. See {{priorities}}.
+A value of 0x0 indicates the original publisher's Group Order SHOULD be
+used. Values larger than 0x2 are a protocol error.
+
+* PreviousGroups: The number of groups prior to LatestGroup as determined for the SUBSCRIBE to FETCH
+
+* Parameters: The parameters are defined in {{version-specific-params}}.
+
+A publisher which receives a JOIN message should treat it as a FETCH with the following fields dynamically determined from the corresponding SUBSCRIBE:
+
+* Track Namespace: Same as in the corresponding SUBSCRIBE
+
+* Track Name: Same as in the corresponding SUBSCRIBE
+
+* StartGroup: LatestGroup as determined for the SUBSCRIBE minus PreviousGroups from the JOIN
+
+* StartObject: 
+
+* EndGroup: LatestGroup as determined for the SUBSCRIBE minus 1
+
+* EndObject: LatestObject as determined for the SUBSCRIBE minus 1
+
 ## FETCH_CANCEL {#message-fetch-cancel}
 
 A subscriber issues a `FETCH_CANCEL` message to a publisher indicating it is no
