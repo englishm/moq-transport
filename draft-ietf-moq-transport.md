@@ -1462,6 +1462,59 @@ A publisher MUST send fetched groups in group order, either ascending or
 descending. Within each group, objects are sent in Object ID order;
 subgroup ID is not used for ordering.
 
+### Joining FETCH
+
+A special case exists where a FETCH may be sent with the same Subscribe ID as SUBSCRIBE.
+When this is done, it signifies the intent for the FETCH to be joined to the SUBSCRIBE.
+A FETCH of this form SHOULD send empty values for certain fields which will be dynamically populated relative to the corresponding SUBSCRIBE.
+
+The format of joining FETCH is identical to a FETCH apart from these restrictions.
+
+~~~
+FETCH Message {
+  Type (i) = 0x16,
+  Length (i),
+  Subscribe ID (i),
+  Track Namespace (tuple),
+  Track Name Length (i),
+  Track Name (..),
+  Subscriber Priority (8),
+  Group Order (8),
+  StartGroup (i),
+  StartObject (i),
+  EndGroup (i),
+  EndObject (i),
+  Number of Parameters (i),
+  Parameters (..) ...
+}
+~~~
+
+* Subscribe ID: The Subscribe ID MUST match the Subscribe ID of an already sent SUBSCRIBE message
+
+* Track Namespace: SHOULD be an empty tuple (length zero)
+
+* Track Name: SHOULD be empty (length zero)
+
+* Subscriber Priority: Specifies the priority of a fetch request relative to
+other subscriptions or fetches in the same session. Lower numbers get higher
+priority. See {{priorities}}.
+
+* Group Order: Allows the subscriber to request Objects be delivered in
+Ascending (0x1) or Descending (0x2) order by group. See {{priorities}}.
+A value of 0x0 indicates the original publisher's Group Order SHOULD be
+used. Values larger than 0x2 are a protocol error.
+
+* StartGroup: Here interpreted as a relative value meaning the number of Groups prior to the current group (as defined by the receiving publisher) to start the FETCH range
+
+* StartObject: SHOULD be zero
+
+* EndGroup: SHOULD be zero. The EndGroup will align (non-overlapping) with the start of the corresponding SUBSCRIBE
+
+* EndObject: SHOULD be zero. The EndObject will align (non-overlapping) with the start of the corresponding SUBSCRIBE
+
+* Parameters: The parameters are defined in {{version-specific-params}}.
+
+
 ## FETCH_CANCEL {#message-fetch-cancel}
 
 A subscriber issues a `FETCH_CANCEL` message to a publisher indicating it is no
