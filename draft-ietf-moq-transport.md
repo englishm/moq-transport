@@ -1475,12 +1475,14 @@ JOIN Message {
   Subscribe ID (i),
   Subscriber Priority (8),
   Group Order (8),
-  PreviousGroups (i),
+  Previous Group Count (i),
   Number of Parameters (i),
   Parameters (..) ...
 }
 ~~~
 {: #moq-transport-fetch-format title="MOQT JOIN Message"}
+
+* FetchType: 
 
 * Subscribe ID: The Subscribe ID identifies a given fetch request. Subscribe ID
 is a variable length integer that MUST be unique and monotonically increasing
@@ -1500,11 +1502,11 @@ Ascending (0x1) or Descending (0x2) order by group. See {{priorities}}.
 A value of 0x0 indicates the original publisher's Group Order SHOULD be
 used. Values larger than 0x2 are a protocol error.
 
-* PreviousGroups: The number of groups prior to LatestGroup as determined for the SUBSCRIBE to FETCH
+* Previous Group Count: The number of groups to FETCH prior to the StartGroup of the corresponding SUBSCRIBE
 
 * Parameters: The parameters are defined in {{version-specific-params}}.
 
-A publisher which receives a JOIN message should treat it as a FETCH with the following fields dynamically determined from the corresponding SUBSCRIBE:
+A publisher which receives a FETCH message with a FetchType of 0x1 should treat it as a FETCH with the following fields dynamically determined from the corresponding SUBSCRIBE:
 
 * Track Namespace: Same as in the corresponding SUBSCRIBE
 
@@ -1512,11 +1514,18 @@ A publisher which receives a JOIN message should treat it as a FETCH with the fo
 
 * StartGroup: LatestGroup as determined for the SUBSCRIBE minus PreviousGroups from the JOIN
 
-* StartObject: 
+* StartObject: Always 0
 
-* EndGroup: LatestGroup as determined for the SUBSCRIBE minus 1
+* EndGroup: StartGroup of the corresponding SUBSCRIBE minus 1 (double check minus 1)
 
-* EndObject: LatestObject as determined for the SUBSCRIBE minus 1
+* EndObject: StartObject of the corresponding SUBSCRIBE minus 1 (double check minus 1)
+
+TODO: 
+ - merge with FETCH using FetchType
+ - table defining FetchTypes (Look at Subscribe FilterType for conventions)
+ - Error for Subscribe ID does not exist with FetchType 0x1
+ - shift priority up into shared fields
+ - omit group order (for our first proposed FetchType)
 
 ## FETCH_CANCEL {#message-fetch-cancel}
 
