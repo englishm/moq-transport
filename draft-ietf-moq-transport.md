@@ -1384,7 +1384,7 @@ fetch response. All omitted objects have status Object Not Available.
 
 **Fetch Types**
 
-There are two types of Fetches:
+There are two types of Fetch messages:
 
 Standalone Fetch (0x1) : A Fetch of Objects performed indepdently of any Subscribe.
 
