@@ -1391,7 +1391,7 @@ fetch response. All omitted objects have status Object Not Available.
 
 There are two types of Fetch messages:
 
-Standalone Fetch (0x1) : A Fetch of Objects performed indepdently of any Subscribe.
+Standalone Fetch (0x1) : A Fetch of Objects performed independently of any Subscribe.
 
 Joining Fetch (0x2) : A Fetch joined together with a Subscribe. A Joining Fetch
 shares the same Subscribe ID as an already-sent Subscribe. A publisher receiving a Joining 
