@@ -560,6 +560,8 @@ code, as defined below:
 |------|---------------------------|
 | 0x6  | Too Many Subscribes       |
 |------|---------------------------|
+| 0x7  | Invalid Subscribe ID      |
+|------|---------------------------|
 | 0x10 | GOAWAY Timeout            |
 |------|---------------------------|
 
@@ -578,6 +580,9 @@ code, as defined below:
 
 * Too Many Subscribes: The session was closed because the subscriber used
   a Subscribe ID equal or larger than the current Maximum Subscribe ID.
+
+* Invalid Subscribe ID: The session was closed because the subscriber sent
+  a Joining Fetch with a Subscribe ID that does not exist.
 
 * GOAWAY Timeout: The session was closed because the client took too long to
   close the session in response to a GOAWAY ({{message-goaway}}) message.
