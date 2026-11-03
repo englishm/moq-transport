@@ -1632,23 +1632,29 @@ unable to process it and the session will be terminated. See {{message-params}}.
 
 ### Session Authorization Exchanges {#session-authorization}
 
-Authorization messages carry session-scoped challenges, responses, and
-credential updates. They are sent on the control streams after SETUP and do not
-apply to a specific request. Request-scoped authorization is carried in request
-messages on the corresponding request stream.
+AUTH_EXCHANGE carries session-scoped tokens, proofs, challenges, and responses in
+AUTH_DATA parameters on the control streams after SETUP. Request-scoped
+authorization remains on the corresponding request stream.
 
-Either endpoint can initiate an exchange by sending AUTHORIZATION_REQUEST on
-its control stream after receiving the peer's SETUP. The client generates even
-Authorization IDs starting at 0, and the server generates odd Authorization IDs
-starting at 1. Each endpoint increments its Authorization ID by 2 for each new
-exchange.
+Either endpoint can start an exchange after receiving the peer's SETUP. The
+client allocates even Authorization IDs starting at 0; the server allocates odd
+IDs starting at 1. Each endpoint increments its ID by 2 only when starting a new
+exchange. IDs MUST NOT be reused within a session.
 
-All messages in an exchange carry the same Authorization ID.
-AUTHORIZATION_DATA can be sent by either endpoint as defined by the Auth Control
-Format. Exactly one AUTHORIZATION_OK or AUTHORIZATION_ERROR ends the exchange.
-An endpoint that receives a duplicate AUTHORIZATION_REQUEST, a message for an
-unknown Authorization ID, or a message after the exchange has ended MUST close
-the session with `PROTOCOL_VIOLATION`.
+An AUTH_EXCHANGE with a new ID starts an exchange. Its ID MUST have the correct
+parity for its sender. Further AUTH_EXCHANGE messages in either direction use
+that same ID; the parity rule does not apply to continuations.
+
+Auth Control Formats define the exchange sequence and which endpoint reports
+success. AUTH_OK is sent after all required processing succeeds.
+A further challenge uses AUTH_EXCHANGE
+and keeps the exchange open. Either endpoint can end a failed exchange with
+AUTH_ERROR. Both results carry the same Authorization ID and end the exchange;
+they do not authorize unrelated requests.
+
+An endpoint MUST NOT send further messages for an ended exchange and MUST ignore
+late messages for ended IDs. A result for an unknown ID, or a new ID with the
+wrong parity, MUST cause a `PROTOCOL_VIOLATION`.
 
 ### 0-RTT {#zero-rtt}
 
@@ -2586,7 +2592,7 @@ that alias has not received a response.
 
 ### Authorization Token Digests {#authorization-token-digests}
 
-Authorization messages refer to tokens using a SHA-256 {{SHA2}} digest of the
+AUTH_DATA refers to tokens using a SHA-256 {{SHA2}} digest of the
 resolved Token Type and Token Value. The Token Digest is computed as follows:
 
 ~~~
@@ -2671,13 +2677,11 @@ new request stream.
 |--------|------------------------------------------------|------------------|
 | 0x5    | REQUEST_ERROR ({{message-request-error}})      | Request          |
 |--------|------------------------------------------------|------------------|
-| TBD1   | AUTHORIZATION_REQUEST ({{message-authorization-request}}) | Control |
+| TBD1   | AUTH_EXCHANGE ({{message-auth-exchange}})     | Control          |
 |--------|------------------------------------------------|------------------|
-| TBD2   | AUTHORIZATION_DATA ({{message-authorization-data}}) | Control       |
+| TBD3   | AUTH_OK ({{message-auth-ok}})                 | Control          |
 |--------|------------------------------------------------|------------------|
-| TBD3   | AUTHORIZATION_OK ({{message-authorization-ok}}) | Control         |
-|--------|------------------------------------------------|------------------|
-| TBD4   | AUTHORIZATION_ERROR ({{message-authorization-error}}) | Control    |
+| TBD4   | AUTH_ERROR ({{message-auth-error}})           | Control          |
 |--------|------------------------------------------------|------------------|
 
 An endpoint that receives an unknown message type MUST close the session.
@@ -3008,66 +3012,59 @@ value of 1 indicates the request can be retried immediately.
 
 The error codes used in REQUEST_ERROR are defined in {{request-error-codes}}.
 
-## AUTHORIZATION_REQUEST {#message-authorization-request}
+## AUTH_EXCHANGE {#message-auth-exchange}
 
 ~~~
-AUTHORIZATION_REQUEST Message {
+AUTH_EXCHANGE Message {
   Type (vi64) = TBD1,
   Length (16),
   Authorization ID (vi64),
-  Auth Control Format (vi64),
-  Token Digest Count (vi64),
-  Token Digests (256) ...,
-  Opaque Payload (..),
+  Number of Parameters (vi64),
+  Parameters (..) ...,
 }
 ~~~
-{: #moq-transport-authorization-request format title="MOQT AUTHORIZATION_REQUEST Message"}
+{: #moq-transport-auth-exchange format title="MOQT AUTH_EXCHANGE Message"}
 
-The Authorization ID correlates messages sent on the two control streams. The
-Auth Control Format defines the opaque payload and processing rules. Token
-Digests identify the session tokens to which the exchange applies; an empty
-list means that no specific token is identified.
+The Authorization ID identifies the exchange ({{session-authorization}}).
+AUTH_EXCHANGE MUST contain at least one AUTH_DATA parameter ({{auth-data}}).
+AUTH_DATA is the only parameter defined for this message.
 
-## AUTHORIZATION_DATA {#message-authorization-data}
-
-~~~
-AUTHORIZATION_DATA Message {
-  Type (vi64) = TBD2,
-  Length (16),
-  Authorization ID (vi64),
-  Opaque Payload (..),
-}
-~~~
-{: #moq-transport-authorization-data format title="MOQT AUTHORIZATION_DATA Message"}
-
-## AUTHORIZATION_OK {#message-authorization-ok}
+## AUTH_OK {#message-auth-ok}
 
 ~~~
-AUTHORIZATION_OK Message {
+AUTH_OK Message {
   Type (vi64) = TBD3,
   Length (16),
   Authorization ID (vi64),
-  Opaque Payload (..),
+  Number of Parameters (vi64),
+  Parameters (..) ...,
 }
 ~~~
-{: #moq-transport-authorization-ok format title="MOQT AUTHORIZATION_OK Message"}
+{: #moq-transport-auth-ok format title="MOQT AUTH_OK Message"}
 
-## AUTHORIZATION_ERROR {#message-authorization-error}
+AUTH_OK completes a successful exchange. It MAY contain AUTH_DATA parameters
+for format-specific result data.
+
+## AUTH_ERROR {#message-auth-error}
 
 ~~~
-AUTHORIZATION_ERROR Message {
+AUTH_ERROR Message {
   Type (vi64) = TBD4,
   Length (16),
   Authorization ID (vi64),
   Error Code (vi64),
   Retry Interval (vi64),
-  Opaque Payload (..),
+  Number of Parameters (vi64),
+  Parameters (..) ...,
 }
 ~~~
-{: #moq-transport-authorization-error format title="MOQT AUTHORIZATION_ERROR Message"}
+{: #moq-transport-auth-error format title="MOQT AUTH_ERROR Message"}
 
-The Auth Control Format defines the Error Code and opaque payload. Retry
-Interval has the same semantics as in REQUEST_ERROR ({{message-request-error}}).
+AUTH_ERROR completes a failed exchange. Error Code uses INTERNAL_ERROR,
+UNAUTHORIZED, TIMEOUT, NOT_SUPPORTED, or EXCESSIVE_LOAD from
+{{request-error-codes}}. It MAY contain AUTH_DATA parameters for format-specific
+error details. Retry Interval has the same semantics as in REQUEST_ERROR
+({{message-request-error}}); a retry starts a new exchange with a new ID.
 
 ## REQUEST_UPDATE {#message-request-update}
 
@@ -3110,14 +3107,14 @@ REQUEST_UPDATE Message {
 * Parameters: The parameters are defined in {{message-params}}.  The
   parameters that can appear depend on the request being updated:
 
-  * Subscription: OBJECT_DELIVERY_TIMEOUT, AUTHORIZATION_TOKEN,
+  * Subscription: OBJECT_DELIVERY_TIMEOUT, AUTHORIZATION_TOKEN, AUTH_DATA,
     SUBGROUP_DELIVERY_TIMEOUT, FORWARD, SUBSCRIBER_PRIORITY, LOCATION_FILTER,
     FILL_PARAMETERS, SUBGROUP_FILTER, OBJECTID_FILTER, PRIORITY_FILTER,
     OBJECT_PROPERTY_FILTER, NEW_GROUP_REQUEST
-  * FETCH: AUTHORIZATION_TOKEN, SUBSCRIBER_PRIORITY
-  * PUBLISH_NAMESPACE: AUTHORIZATION_TOKEN
-  * SUBSCRIBE_NAMESPACE: AUTHORIZATION_TOKEN, TRACK_NAMESPACE_PREFIX
-  * SUBSCRIBE_TRACKS: AUTHORIZATION_TOKEN, FORWARD, TRACK_PROPERTY_FILTER,
+  * FETCH: AUTHORIZATION_TOKEN, AUTH_DATA, SUBSCRIBER_PRIORITY
+  * PUBLISH_NAMESPACE: AUTHORIZATION_TOKEN, AUTH_DATA
+  * SUBSCRIBE_NAMESPACE: AUTHORIZATION_TOKEN, AUTH_DATA, TRACK_NAMESPACE_PREFIX
+  * SUBSCRIBE_TRACKS: AUTHORIZATION_TOKEN, AUTH_DATA, FORWARD, TRACK_PROPERTY_FILTER,
     TRACK_NAMESPACE_PREFIX
 
   Range Filters are only allowed from the subscriber (see {{range-filters}}).
@@ -3207,7 +3204,7 @@ SUBSCRIBE Message {
 
 * Parameters: The parameters are defined in {{message-params}}.  The parameters
   that can appear in a SUBSCRIBE are OBJECT_DELIVERY_TIMEOUT,
-  AUTHORIZATION_TOKEN, RENDEZVOUS_TIMEOUT, SUBGROUP_DELIVERY_TIMEOUT, FORWARD,
+  AUTHORIZATION_TOKEN, AUTH_DATA, RENDEZVOUS_TIMEOUT, SUBGROUP_DELIVERY_TIMEOUT, FORWARD,
   SUBSCRIBER_PRIORITY, LOCATION_FILTER, GROUP_ORDER, FILL_PARAMETERS,
   SUBGROUP_FILTER, OBJECTID_FILTER, PRIORITY_FILTER, OBJECT_PROPERTY_FILTER,
   NEW_GROUP_REQUEST and INCLUDE_PROPERTIES.
@@ -3275,7 +3272,7 @@ PUBLISH Message {
 
 * Parameters: The parameters are defined in {{message-params}}. The parameters
   that can appear in a PUBLISH are OBJECT_DELIVERY_TIMEOUT,
-  AUTHORIZATION_TOKEN, SUBGROUP_DELIVERY_TIMEOUT, EXPIRES, LARGEST_OBJECT,
+  AUTHORIZATION_TOKEN, AUTH_DATA, SUBGROUP_DELIVERY_TIMEOUT, EXPIRES, LARGEST_OBJECT,
   FORWARD, SUBSCRIBER_PRIORITY, LOCATION_FILTER and GROUP_ORDER.  Those
   governing delivery, such as FORWARD, GROUP_ORDER, SUBSCRIBER_PRIORITY,
   SUBGROUP_DELIVERY_TIMEOUT, OBJECT_DELIVERY_TIMEOUT and LOCATION_FILTER,
@@ -3445,7 +3442,7 @@ FETCH Message {
 * Track Name: Identifies the track name as defined in ({{track-name}}).
 
 * Parameters: The parameters are defined in {{message-params}}.  The parameters
-  that can appear in a FETCH are AUTHORIZATION_TOKEN, FILL_TIMEOUT,
+  that can appear in a FETCH are AUTHORIZATION_TOKEN, AUTH_DATA, FILL_TIMEOUT,
   SUBSCRIBER_PRIORITY, LOCATION_FILTER, GROUP_ORDER, SUBGROUP_FILTER,
   OBJECTID_FILTER, PRIORITY_FILTER, OBJECT_PROPERTY_FILTER and
   INCLUDE_PROPERTIES.
@@ -3492,7 +3489,7 @@ new bidi stream to obtain information about the current status of a given track.
 The TRACK_STATUS message format is identical to the SUBSCRIBE message
 ({{message-subscribe-req}}), but subscriber parameters related to Track
 delivery (e.g. SUBSCRIBER_PRIORITY) are not included.  The parameters that can
-appear in a TRACK_STATUS are AUTHORIZATION_TOKEN and INCLUDE_PROPERTIES.
+appear in a TRACK_STATUS are AUTHORIZATION_TOKEN, AUTH_DATA and INCLUDE_PROPERTIES.
 
 The receiver of a TRACK_STATUS message treats it identically as if it had
 received a SUBSCRIBE message, except it does not create downstream subscription
@@ -3534,8 +3531,8 @@ PUBLISH_NAMESPACE Message {
   {{track-namespace-structure}}, matched as a prefix (see
   {{namespace-prefix-matching}}).
 
-* Parameters: The parameters are defined in {{message-params}}.  The only
-  parameter that can appear in a PUBLISH_NAMESPACE is AUTHORIZATION_TOKEN.
+* Parameters: The parameters are defined in {{message-params}}.  The parameters
+  that can appear in a PUBLISH_NAMESPACE are AUTHORIZATION_TOKEN and AUTH_DATA.
 
 ## SUBSCRIBE_NAMESPACE {#message-subscribe-ns}
 
@@ -3565,8 +3562,8 @@ SUBSCRIBE_NAMESPACE Message {
   `example.2ecom-123-200`, a SUBSCRIBE_NAMESPACE for `example.2ecom-123` would
   match both.
 
-* Parameters: The parameters are defined in {{message-params}}.  The only
-  parameter that can appear in a SUBSCRIBE_NAMESPACE is AUTHORIZATION_TOKEN.
+* Parameters: The parameters are defined in {{message-params}}.  The parameters
+  that can appear in a SUBSCRIBE_NAMESPACE are AUTHORIZATION_TOKEN and AUTH_DATA.
 
 The publisher will respond with SUBSCRIBE_NAMESPACE_OK or
 SUBSCRIBE_NAMESPACE_ERROR on the response half of the stream. If the subscriber
@@ -3673,7 +3670,7 @@ SUBSCRIBE_TRACKS Message {
 * Parameters: The parameters are defined in {{message-params}}, though they
   are handled differently from the same Parameters on Subscriptions, as outlined
   below.  The parameters that can appear in a SUBSCRIBE_TRACKS are
-  AUTHORIZATION_TOKEN, FORWARD, GROUP_ORDER, SUBGROUP_FILTER, OBJECTID_FILTER,
+  AUTHORIZATION_TOKEN, AUTH_DATA, FORWARD, GROUP_ORDER, SUBGROUP_FILTER, OBJECTID_FILTER,
   PRIORITY_FILTER, OBJECT_PROPERTY_FILTER, TRACK_PROPERTY_FILTER and
   INCLUDE_PROPERTIES.
 
@@ -3816,6 +3813,31 @@ to the resulting PUBLISH message Parameters.
 
 The parameter value is a Token structure, whose wire format and semantics are
 defined in {{auth-token-compression}}.
+
+### AUTH_DATA Parameter {#auth-data}
+
+AUTH_DATA (Parameter Type TBD5) uses Length-prefixed encoding. It MAY appear in
+AUTH_EXCHANGE, AUTH_OK, AUTH_ERROR, PUBLISH, SUBSCRIBE, REQUEST_UPDATE,
+SUBSCRIBE_NAMESPACE, SUBSCRIBE_TRACKS, PUBLISH_NAMESPACE, TRACK_STATUS, or FETCH.
+It MAY be repeated within a message. Its value is:
+
+~~~
+Auth Data {
+  Auth Control Format (vi64),
+  Token Digest Count (vi64),
+  Token Digests (256) ...,
+  Opaque Data (..),
+}
+~~~
+{: #moq-auth-data format title="Auth Data structure"}
+
+The Auth Control Format defines the opaque data and its processing, including
+tokens, proofs, challenges, nonces, and responses. Token Digests identify any
+existing tokens that the data concerns ({{authorization-token-digests}}); an
+empty list identifies no existing token.
+
+AUTH_DATA applies to the message carrying it and is not retained as request
+state. It MUST NOT be copied from SUBSCRIBE_TRACKS to a resulting PUBLISH.
 
 ### SUBGROUP_DELIVERY_TIMEOUT Parameter {#subgroup-delivery-timeout}
 
@@ -5729,6 +5751,7 @@ Setup Options SHOULD request a provisional registration.
 |----------------|----------------|---------------|
 | 0x02 | OBJECT_DELIVERY_TIMEOUT | {{object-delivery-timeout}} |
 | 0x03 | AUTHORIZATION_TOKEN | {{authorization-token}} |
+| TBD5 | AUTH_DATA | {{auth-data}} |
 | 0x04 | RENDEZVOUS_TIMEOUT | {{rendezvous-timeout}} |
 | 0x06 | SUBGROUP_DELIVERY_TIMEOUT | {{subgroup-delivery-timeout}} |
 | 0x08 | EXPIRES | {{expires}} |
