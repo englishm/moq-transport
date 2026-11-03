@@ -1633,7 +1633,7 @@ unable to process it and the session will be terminated. See {{message-params}}.
 ### Session Authorization Exchanges {#session-authorization}
 
 AUTH_EXCHANGE carries session-scoped tokens, proofs, challenges, and responses in
-AUTH_DATA parameters on the control streams after SETUP. Request-scoped
+AUTH_PAYLOAD parameters on the control streams after SETUP. Request-scoped
 authorization remains on the corresponding request stream.
 
 Either endpoint can start an exchange after receiving the peer's SETUP. The
@@ -2592,7 +2592,7 @@ that alias has not received a response.
 
 ### Authorization Token Digests {#authorization-token-digests}
 
-The AUTH_DATA parameter ({{auth-data}}), carried in AUTH_EXCHANGE and other
+The AUTH_PAYLOAD parameter ({{auth-payload}}), carried in AUTH_EXCHANGE and other
 messages, identifies tokens using a SHA-256 {{SHA2}} digest of the resolved
 Token Type and Token Value. The Token Digest is computed as follows:
 
@@ -3027,8 +3027,8 @@ AUTH_EXCHANGE Message {
 {: #moq-transport-auth-exchange format title="MOQT AUTH_EXCHANGE Message"}
 
 The Authorization ID identifies the exchange ({{session-authorization}}).
-AUTH_EXCHANGE MUST contain at least one AUTH_DATA parameter ({{auth-data}}).
-AUTH_DATA is the only parameter defined for this message.
+AUTH_EXCHANGE MUST contain at least one AUTH_PAYLOAD parameter ({{auth-payload}}).
+AUTH_PAYLOAD is the only parameter defined for this message.
 
 ## AUTH_OK {#message-auth-ok}
 
@@ -3043,7 +3043,7 @@ AUTH_OK Message {
 ~~~
 {: #moq-transport-auth-ok format title="MOQT AUTH_OK Message"}
 
-AUTH_OK completes a successful exchange. It MAY contain AUTH_DATA parameters
+AUTH_OK completes a successful exchange. It MAY contain AUTH_PAYLOAD parameters
 for format-specific result data.
 
 ## AUTH_ERROR {#message-auth-error}
@@ -3063,7 +3063,7 @@ AUTH_ERROR Message {
 
 AUTH_ERROR completes a failed exchange. Error Code uses INTERNAL_ERROR,
 UNAUTHORIZED, TIMEOUT, NOT_SUPPORTED, or EXCESSIVE_LOAD from
-{{request-error-codes}}. It MAY contain AUTH_DATA parameters for format-specific
+{{request-error-codes}}. It MAY contain AUTH_PAYLOAD parameters for format-specific
 error details. Retry Interval has the same semantics as in REQUEST_ERROR
 ({{message-request-error}}); a retry starts a new exchange with a new ID.
 
@@ -3108,14 +3108,14 @@ REQUEST_UPDATE Message {
 * Parameters: The parameters are defined in {{message-params}}.  The
   parameters that can appear depend on the request being updated:
 
-  * Subscription: OBJECT_DELIVERY_TIMEOUT, AUTHORIZATION_TOKEN, AUTH_DATA,
+  * Subscription: OBJECT_DELIVERY_TIMEOUT, AUTHORIZATION_TOKEN, AUTH_PAYLOAD,
     SUBGROUP_DELIVERY_TIMEOUT, FORWARD, SUBSCRIBER_PRIORITY, LOCATION_FILTER,
     FILL_PARAMETERS, SUBGROUP_FILTER, OBJECTID_FILTER, PRIORITY_FILTER,
     OBJECT_PROPERTY_FILTER, NEW_GROUP_REQUEST
-  * FETCH: AUTHORIZATION_TOKEN, AUTH_DATA, SUBSCRIBER_PRIORITY
-  * PUBLISH_NAMESPACE: AUTHORIZATION_TOKEN, AUTH_DATA
-  * SUBSCRIBE_NAMESPACE: AUTHORIZATION_TOKEN, AUTH_DATA, TRACK_NAMESPACE_PREFIX
-  * SUBSCRIBE_TRACKS: AUTHORIZATION_TOKEN, AUTH_DATA, FORWARD, TRACK_PROPERTY_FILTER,
+  * FETCH: AUTHORIZATION_TOKEN, AUTH_PAYLOAD, SUBSCRIBER_PRIORITY
+  * PUBLISH_NAMESPACE: AUTHORIZATION_TOKEN, AUTH_PAYLOAD
+  * SUBSCRIBE_NAMESPACE: AUTHORIZATION_TOKEN, AUTH_PAYLOAD, TRACK_NAMESPACE_PREFIX
+  * SUBSCRIBE_TRACKS: AUTHORIZATION_TOKEN, AUTH_PAYLOAD, FORWARD, TRACK_PROPERTY_FILTER,
     TRACK_NAMESPACE_PREFIX
 
   Range Filters are only allowed from the subscriber (see {{range-filters}}).
@@ -3205,7 +3205,7 @@ SUBSCRIBE Message {
 
 * Parameters: The parameters are defined in {{message-params}}.  The parameters
   that can appear in a SUBSCRIBE are OBJECT_DELIVERY_TIMEOUT,
-  AUTHORIZATION_TOKEN, AUTH_DATA, RENDEZVOUS_TIMEOUT, SUBGROUP_DELIVERY_TIMEOUT, FORWARD,
+  AUTHORIZATION_TOKEN, AUTH_PAYLOAD, RENDEZVOUS_TIMEOUT, SUBGROUP_DELIVERY_TIMEOUT, FORWARD,
   SUBSCRIBER_PRIORITY, LOCATION_FILTER, GROUP_ORDER, FILL_PARAMETERS,
   SUBGROUP_FILTER, OBJECTID_FILTER, PRIORITY_FILTER, OBJECT_PROPERTY_FILTER,
   NEW_GROUP_REQUEST and INCLUDE_PROPERTIES.
@@ -3273,7 +3273,7 @@ PUBLISH Message {
 
 * Parameters: The parameters are defined in {{message-params}}. The parameters
   that can appear in a PUBLISH are OBJECT_DELIVERY_TIMEOUT,
-  AUTHORIZATION_TOKEN, AUTH_DATA, SUBGROUP_DELIVERY_TIMEOUT, EXPIRES, LARGEST_OBJECT,
+  AUTHORIZATION_TOKEN, AUTH_PAYLOAD, SUBGROUP_DELIVERY_TIMEOUT, EXPIRES, LARGEST_OBJECT,
   FORWARD, SUBSCRIBER_PRIORITY, LOCATION_FILTER and GROUP_ORDER.  Those
   governing delivery, such as FORWARD, GROUP_ORDER, SUBSCRIBER_PRIORITY,
   SUBGROUP_DELIVERY_TIMEOUT, OBJECT_DELIVERY_TIMEOUT and LOCATION_FILTER,
@@ -3443,7 +3443,7 @@ FETCH Message {
 * Track Name: Identifies the track name as defined in ({{track-name}}).
 
 * Parameters: The parameters are defined in {{message-params}}.  The parameters
-  that can appear in a FETCH are AUTHORIZATION_TOKEN, AUTH_DATA, FILL_TIMEOUT,
+  that can appear in a FETCH are AUTHORIZATION_TOKEN, AUTH_PAYLOAD, FILL_TIMEOUT,
   SUBSCRIBER_PRIORITY, LOCATION_FILTER, GROUP_ORDER, SUBGROUP_FILTER,
   OBJECTID_FILTER, PRIORITY_FILTER, OBJECT_PROPERTY_FILTER and
   INCLUDE_PROPERTIES.
@@ -3490,7 +3490,7 @@ new bidi stream to obtain information about the current status of a given track.
 The TRACK_STATUS message format is identical to the SUBSCRIBE message
 ({{message-subscribe-req}}), but subscriber parameters related to Track
 delivery (e.g. SUBSCRIBER_PRIORITY) are not included.  The parameters that can
-appear in a TRACK_STATUS are AUTHORIZATION_TOKEN, AUTH_DATA and INCLUDE_PROPERTIES.
+appear in a TRACK_STATUS are AUTHORIZATION_TOKEN, AUTH_PAYLOAD and INCLUDE_PROPERTIES.
 
 The receiver of a TRACK_STATUS message treats it identically as if it had
 received a SUBSCRIBE message, except it does not create downstream subscription
@@ -3533,7 +3533,7 @@ PUBLISH_NAMESPACE Message {
   {{namespace-prefix-matching}}).
 
 * Parameters: The parameters are defined in {{message-params}}.  The parameters
-  that can appear in a PUBLISH_NAMESPACE are AUTHORIZATION_TOKEN and AUTH_DATA.
+  that can appear in a PUBLISH_NAMESPACE are AUTHORIZATION_TOKEN and AUTH_PAYLOAD.
 
 ## SUBSCRIBE_NAMESPACE {#message-subscribe-ns}
 
@@ -3564,7 +3564,7 @@ SUBSCRIBE_NAMESPACE Message {
   match both.
 
 * Parameters: The parameters are defined in {{message-params}}.  The parameters
-  that can appear in a SUBSCRIBE_NAMESPACE are AUTHORIZATION_TOKEN and AUTH_DATA.
+  that can appear in a SUBSCRIBE_NAMESPACE are AUTHORIZATION_TOKEN and AUTH_PAYLOAD.
 
 The publisher will respond with SUBSCRIBE_NAMESPACE_OK or
 SUBSCRIBE_NAMESPACE_ERROR on the response half of the stream. If the subscriber
@@ -3671,7 +3671,7 @@ SUBSCRIBE_TRACKS Message {
 * Parameters: The parameters are defined in {{message-params}}, though they
   are handled differently from the same Parameters on Subscriptions, as outlined
   below.  The parameters that can appear in a SUBSCRIBE_TRACKS are
-  AUTHORIZATION_TOKEN, AUTH_DATA, FORWARD, GROUP_ORDER, SUBGROUP_FILTER, OBJECTID_FILTER,
+  AUTHORIZATION_TOKEN, AUTH_PAYLOAD, FORWARD, GROUP_ORDER, SUBGROUP_FILTER, OBJECTID_FILTER,
   PRIORITY_FILTER, OBJECT_PROPERTY_FILTER, TRACK_PROPERTY_FILTER and
   INCLUDE_PROPERTIES.
 
@@ -3815,29 +3815,29 @@ to the resulting PUBLISH message Parameters.
 The parameter value is a Token structure, whose wire format and semantics are
 defined in {{auth-token-compression}}.
 
-### AUTH_DATA Parameter {#auth-data}
+### AUTH_PAYLOAD Parameter {#auth-payload}
 
-AUTH_DATA (Parameter Type TBD5) uses Length-prefixed encoding. It MAY appear in
+AUTH_PAYLOAD (Parameter Type TBD5) uses Length-prefixed encoding. It MAY appear in
 AUTH_EXCHANGE, AUTH_OK, AUTH_ERROR, PUBLISH, SUBSCRIBE, REQUEST_UPDATE,
 SUBSCRIBE_NAMESPACE, SUBSCRIBE_TRACKS, PUBLISH_NAMESPACE, TRACK_STATUS, or FETCH.
 It MAY be repeated within a message. Its value is:
 
 ~~~
-Auth Data {
+Auth Payload {
   Auth Control Format (vi64),
   Token Digest Count (vi64),
   Token Digests (256) ...,
   Opaque Data (..),
 }
 ~~~
-{: #moq-auth-data format title="Auth Data structure"}
+{: #moq-auth-payload format title="Auth Payload structure"}
 
 The Auth Control Format defines the opaque data and its processing, including
 tokens, proofs, challenges, nonces, and responses. Token Digests identify any
 existing tokens that the data concerns ({{authorization-token-digests}}); an
 empty list identifies no existing token.
 
-AUTH_DATA applies to the message carrying it and is not retained as request
+AUTH_PAYLOAD applies to the message carrying it and is not retained as request
 state. It MUST NOT be copied from SUBSCRIBE_TRACKS to a resulting PUBLISH.
 
 ### SUBGROUP_DELIVERY_TIMEOUT Parameter {#subgroup-delivery-timeout}
@@ -5752,7 +5752,7 @@ Setup Options SHOULD request a provisional registration.
 |----------------|----------------|---------------|
 | 0x02 | OBJECT_DELIVERY_TIMEOUT | {{object-delivery-timeout}} |
 | 0x03 | AUTHORIZATION_TOKEN | {{authorization-token}} |
-| TBD5 | AUTH_DATA | {{auth-data}} |
+| TBD5 | AUTH_PAYLOAD | {{auth-payload}} |
 | 0x04 | RENDEZVOUS_TIMEOUT | {{rendezvous-timeout}} |
 | 0x06 | SUBGROUP_DELIVERY_TIMEOUT | {{subgroup-delivery-timeout}} |
 | 0x08 | EXPIRES | {{expires}} |
