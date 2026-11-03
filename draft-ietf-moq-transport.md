@@ -2592,8 +2592,9 @@ that alias has not received a response.
 
 ### Authorization Token Digests {#authorization-token-digests}
 
-AUTH_DATA refers to tokens using a SHA-256 {{SHA2}} digest of the
-resolved Token Type and Token Value. The Token Digest is computed as follows:
+The AUTH_DATA parameter ({{auth-data}}), carried in AUTH_EXCHANGE and other
+messages, identifies tokens using a SHA-256 {{SHA2}} digest of the resolved
+Token Type and Token Value. The Token Digest is computed as follows:
 
 ~~~
 SHA-256(
